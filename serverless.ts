@@ -15,7 +15,20 @@ const serverlessConfiguration: AWS = {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       NODE_OPTIONS: '--enable-source-maps --stack-trace-limit=1000',
     },
+    iamRoleStatements: [
+      {
+         Effect: "Allow",
+         Action: ["dynamodb:*"],
+         Resource: ["*"]
+      },
+      {
+         Effect: "Allow",
+         Action: ["s3:*"],
+         Resource: ["*"]
+      }
+    ]
   },
+  package: {individually: false, include: ["./src/templates/**"]},
   // import the function via paths
   functions: { 
    generateCertificate: {
@@ -29,9 +42,20 @@ const serverlessConfiguration: AWS = {
             }
          }
       ]
+   },
+   verifyCertificate: {
+      handler: "src/functions/verifyCertificate.handler",
+      events: [
+         {
+            http: {
+               path: "verifyCertificate/{id}",
+               method: "get",
+               cors: true
+            }
+         }
+      ]
    }
   },
-  package: { individually: true },
   custom: {
     esbuild: {
       bundle: true,
@@ -42,6 +66,7 @@ const serverlessConfiguration: AWS = {
       define: { 'require.resolve': undefined },
       platform: 'node',
       concurrency: 10,
+      external: ["chrome-aws-lambda"]
     },
     dynamodb: {
       stages: ["dev", "local"],
@@ -57,7 +82,7 @@ const serverlessConfiguration: AWS = {
       dbCertificateUsers: {
          Type: "AWS::DynamoDB::Table",
          Properties: {
-            TableName: "user_cerficate",
+            TableName: "user_certificate",
             ProvisionedThroughput: {
                ReadCapacityUnits: 3,
                WriteCapacityUnits: 3
@@ -68,10 +93,10 @@ const serverlessConfiguration: AWS = {
                   AttributeType: "S"
                }
             ],
-            KeySchema: {
+            KeySchema: [{
                AttributeName: "id",
                KeyType: "HASH"
-            }
+            }]
          }
       }
    } 
